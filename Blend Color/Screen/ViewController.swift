@@ -28,8 +28,21 @@ class ColorMixingViewController: UIViewController, UIColorPickerViewControllerDe
         element.translatesAutoresizingMaskIntoConstraints = false
         return element
     }()
-    private var selectedButton: UIButton?
     
+    private lazy var resultsButton: UIButton = {
+        let element = UIButton(type: .system)
+        element.backgroundColor = .purple
+        element.setTitle("Purple", for: .normal)
+        element.setTitleColor(.black, for: .normal)
+        element.layer.cornerRadius = 50
+        element.translatesAutoresizingMaskIntoConstraints = false
+        return element
+    }()
+
+    private var selectedButton: UIButton?
+    var color1: UIColor?
+    var color2: UIColor?
+
     let colorNames: [String: UIColor] = [
         "Red": UIColor.red,
         "Green": UIColor.green,
@@ -66,6 +79,7 @@ class ColorMixingViewController: UIViewController, UIColorPickerViewControllerDe
         view.backgroundColor = .white
         view.addSubview(firsColorButton)
         view.addSubview(secondColorButton)
+        view.addSubview(resultsButton)
         setupView()
     }
     
@@ -77,8 +91,14 @@ class ColorMixingViewController: UIViewController, UIColorPickerViewControllerDe
              firsColorButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
              firsColorButton.heightAnchor.constraint(equalToConstant: 100),
              firsColorButton.widthAnchor.constraint(equalToConstant: 100),
+             
+             resultsButton.leadingAnchor.constraint(equalTo: firsColorButton.leadingAnchor),
+             resultsButton.topAnchor.constraint(equalTo: firsColorButton.bottomAnchor, constant: 50),
+             resultsButton.heightAnchor.constraint(equalToConstant: 100),
+             resultsButton.widthAnchor.constraint(equalToConstant: 100),
+             
              secondColorButton.leadingAnchor.constraint(equalTo: firsColorButton.leadingAnchor),
-             secondColorButton.topAnchor.constraint(equalTo: firsColorButton.bottomAnchor, constant: 50),
+             secondColorButton.topAnchor.constraint(equalTo: resultsButton.bottomAnchor),
              secondColorButton.heightAnchor.constraint(equalToConstant: 100),
              secondColorButton.widthAnchor.constraint(equalToConstant: 100),])
         
@@ -136,6 +156,33 @@ class ColorMixingViewController: UIViewController, UIColorPickerViewControllerDe
 
         return closestColorName
     }
+    
+    func mixColors(color1: UIColor, color2: UIColor, ratio: CGFloat = 0.5) -> UIColor {
+        // Убедимся, что коэффициент находится в пределах от 0 до 1
+        let clampedRatio = min(max(ratio, 0), 1)
+        
+        // Получаем компоненты цветов
+        var red1: CGFloat = 0
+        var green1: CGFloat = 0
+        var blue1: CGFloat = 0
+        var alpha1: CGFloat = 0
+        color1.getRed(&red1, green: &green1, blue: &blue1, alpha: &alpha1)
+
+        var red2: CGFloat = 0
+        var green2: CGFloat = 0
+        var blue2: CGFloat = 0
+        var alpha2: CGFloat = 0
+        color2.getRed(&red2, green: &green2, blue: &blue2, alpha: &alpha2)
+
+        // Смешиваем цвета
+        let mixedRed = (red1 * (1 - clampedRatio)) + (red2 * clampedRatio)
+        let mixedGreen = (green1 * (1 - clampedRatio)) + (green2 * clampedRatio)
+        let mixedBlue = (blue1 * (1 - clampedRatio)) + (blue2 * clampedRatio)
+        let mixedAlpha = (alpha1 * (1 - clampedRatio)) + (alpha2 * clampedRatio)
+
+        return UIColor(red: mixedRed, green: mixedGreen, blue: mixedBlue, alpha: mixedAlpha)
+    }
+
     func colorPickerViewControllerDidSelectColor(_ viewController: UIColorPickerViewController) {
         guard let selectedButton = selectedButton else { return }
         
@@ -159,6 +206,30 @@ class ColorMixingViewController: UIViewController, UIColorPickerViewControllerDe
 
         // Находим ближайший цвет и обновляем название кнопки
         let closestColorName = nearestColor(to: selectedColor)
+        
         selectedButton.setTitle(closestColorName, for: .normal)
+        
+        // Сохраняем цвет в соответствующую переменную
+        if selectedButton.tag == 0 {
+            color1 = selectedColor
+        } else if selectedButton.tag == 1 {
+            color2 = selectedColor
+            
+        }
+        
+        // Обновляем цвет результата, если хотя бы один цвет выбран
+        if let c1 = color1 ?? color2 {
+            let resultColor: UIColor
+            if let c2 = color2 {
+                resultColor = mixColors(color1: c1, color2: c2)
+            } else {
+                // Если выбран только один цвет, используем его как результат
+                resultColor = c1
+            }
+            let resultclosestColorName = nearestColor(to: resultColor)
+            resultsButton.backgroundColor = resultColor
+            resultsButton.setTitle(resultclosestColorName, for: .normal)
+            resultsButton.setTitleColor(.white, for: .normal)
+        }
     }
-      }
+}
